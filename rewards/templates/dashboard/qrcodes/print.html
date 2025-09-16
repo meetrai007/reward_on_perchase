@@ -1,0 +1,71 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Print QR Codes{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .print-section, .print-section * {
+            visibility: visible;
+        }
+        .print-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .no-print {
+            display: none !important;
+        }
+    }
+    .qr-code {
+        width: 100%;
+        max-width: 200px;
+    }
+    .qr-item {
+        page-break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom no-print">
+    <h1 class="h2">Print QR Codes</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button onclick="window.print()" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-printer"></i> Print
+        </button>
+        <a href="{% url 'qrcode_list' %}" class="btn btn-sm btn-outline-secondary ms-2">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<div class="alert alert-info no-print">
+    <p>Click the print button to print these QR codes. Make sure to use A4 size paper.</p>
+</div>
+
+<div class="print-section">
+    <div class="row">
+        {% for qrcode in qrcodes %}
+        <div class="col-md-3 qr-item text-center mb-4">
+            <div class="border p-2">
+                <h5>{{ qrcode.product.name }}</h5>
+                <p><strong>Points:</strong> {{ qrcode.product.points }}</p>
+                <img src="{{ qrcode.generate_qr_code }}" alt="QR Code" class="qr-code mb-2">
+                <p class="mb-0"><small>{{ qrcode.code }}</small></p>
+                <p class="mb-0"><small>Scan to redeem</small></p>
+            </div>
+        </div>
+        {% if forloop.counter|divisibleby:4 and not forloop.last %}
+        </div>
+        <div class="row">
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
