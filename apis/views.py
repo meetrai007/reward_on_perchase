@@ -1,5 +1,5 @@
-from functools import cache
-from time import timezone
+from django.core.cache import cache
+from django.utils import timezone
 from django.db.models import Sum
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -42,8 +42,15 @@ def otp_is_valid(phone, otp):
 @permission_classes([AllowAny])
 def send_otp(request):
     phone = request.data.get('phone')
-    otp = random.randint(1000, 9999)
-    return Response({'message': 'OTP sent successfully'}, status=status.HTTP_200_OK)
+    otp = str(random.randint(1000, 9999))  # store as string for consistency
+    cache_key = f"otp_{phone}"
+
+    # store OTP in cache with expiry (e.g. 5 minutes = 300 sec)
+    cache.set(cache_key, otp, timeout=300)
+
+    # for testing, return OTP in response
+    return Response({'message': 'OTP sent successfully', 'otp': otp}, status=status.HTTP_200_OK)
+
 
 
 @swagger_auto_schema(
@@ -58,6 +65,7 @@ def send_otp(request):
     ),
     responses={200: "Tokens or new user", 400: "Invalid OTP"},
 )
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def verify_otp(request):
@@ -69,7 +77,13 @@ def verify_otp(request):
         if created:
             user.is_phone_verified = True
             user.save()
-            return Response({'new_user': True, 'token': user.get_auth_token()})
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'new_user': True,
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            })
+
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -80,6 +94,25 @@ def verify_otp(request):
     return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+@swagger_auto_schema(
+    method="put",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'first_name': openapi.Schema(type=openapi.TYPE_STRING, description="User's first name"),
+            'last_name': openapi.Schema(type=openapi.TYPE_STRING, description="User's last name"),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description="City name"),
+            'profession': openapi.Schema(type=openapi.TYPE_STRING, description="User profession"),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description="Email address"),
+        },
+        required=['first_name', 'last_name'],  # adjust based on serializer
+    ),
+    responses={
+        200: "Profile updated successfully",
+        400: "Validation error",
+    }
+)
 @api_view(['GET', 'PUT'])
 def user_profile(request):
     if request.method == 'GET':
@@ -92,7 +125,6 @@ def user_profile(request):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @swagger_auto_schema(
     method="post",

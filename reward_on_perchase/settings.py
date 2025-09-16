@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'drf_yasg',
     'rest_framework_simplejwt',
     'corsheaders',
+    'django.contrib.humanize',
+
 ]
 
 MIDDLEWARE = [

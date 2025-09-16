@@ -19,7 +19,7 @@ class PaymentOptionSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'last_name', 'city', 'profession', 'phone')
+        fields = ('id', 'first_name', 'last_name', 'city', 'profession')
 
 # Payment Option Serializer
 class PaymentOptionSerializer(serializers.ModelSerializer):

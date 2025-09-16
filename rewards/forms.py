@@ -21,14 +21,35 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = ['category', 'name', 'description', 'image', 'points', 'is_active']
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 4}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter product name'
+            }),
+            'category': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Enter product description'
+            }),
+            'points': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter reward points'
+            }),
+            'image': forms.ClearableFileInput(attrs={
+                'class': 'form-control'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
         }
 
 class QRCodeGenerateForm(forms.Form):
     product = forms.ModelChoiceField(
         queryset=Product.objects.filter(is_active=True),
         empty_label="Select a product"
-    )
+    )  
     quantity = forms.IntegerField(
         min_value=1,
         max_value=100,
