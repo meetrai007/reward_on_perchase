@@ -1,0 +1,36 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Generate QR Codes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Generate QR Codes</h1>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="card">
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="{{ form.product.id_for_label }}" class="form-label">Product</label>
+                {{ form.product }}
+                {% if form.product.errors %}
+                    <div class="text-danger">{{ form.product.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.quantity.id_for_label }}" class="form-label">Quantity</label>
+                {{ form.quantity }}
+                {% if form.quantity.errors %}
+                    <div class="text-danger">{{ form.quantity.errors }}</div>
+                {% endif %}
+                <div class="form-text">{{ form.quantity.help_text }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-primary mt-3">Generate QR Codes</button>
+    <a href="{% url 'qrcode_list' %}" class="btn btn-secondary mt-3">Cancel</a>
+</form>
+{% endblock %}
