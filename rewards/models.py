@@ -147,3 +147,21 @@ class RewardHistory(models.Model):
 
     def __str__(self):
         return f"{self.user.phone} earned {self.points_earned} points"
+
+
+# models.py
+class RedemptionRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="redemption_requests")
+    points = models.PositiveIntegerField()
+    payment_method = models.ForeignKey(PaymentOption, on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.phone} - {self.points} points - {self.status}"
