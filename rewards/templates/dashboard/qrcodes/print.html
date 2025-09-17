@@ -4,7 +4,11 @@
 
 {% block extra_css %}
 <style>
-    /* Print styles */
+    /* Hide QR codes on screen */
+    .print-section {
+        display: none;
+    }
+
     @media print {
         body * {
             visibility: hidden;
@@ -12,6 +16,7 @@
 
         .print-section, .print-section * {
             visibility: visible;
+            display: block;
         }
 
         .print-section {
@@ -25,32 +30,61 @@
             display: none !important;
         }
 
-        /* Force 3 columns per row in print */
-        .qr-row {
-            display: flex;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
+        /* Grid layout for printing */
+        .page {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 QR codes per row */
+            grid-auto-rows: auto;
+            gap: 10px;
+            justify-items: center; /* Center items horizontally */
+            align-items: center; /* Center items vertically */
+            margin: 0 auto; /* Center the grid on the page */
+            width: 100%;
         }
 
         .qr-item {
-            width: 33.33%; /* 3 items per row */
-            box-sizing: border-box;
+            break-inside: avoid;
+            text-align: center;
             padding: 5px;
-            page-break-inside: avoid;
-        }
-
-        /* Page break after 12 items (3x4) */
-        .page-break {
-            page-break-after: always;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%; /* Ensure full width of grid cell */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center content horizontally */
+            justify-content: center; /* Center content vertically */
+            height: 100%; /* Fill the grid cell */
         }
 
         .qr-code {
-            width: 100%;
             max-width: 150px;
+            width: 100%;
+            margin: 0 auto; /* Center the image */
+            display: block;
+        }
+        
+        h5 {
+            margin: 5px 0;
+            text-align: center;
+            width: 100%;
+        }
+        
+        p {
+            margin: 2px 0;
+            text-align: center;
+            width: 100%;
         }
     }
 
     /* Screen styles */
+    .qr-preview {
+        text-align: center;
+        padding: 20px;
+        border: 2px dashed #ccc;
+        border-radius: 5px;
+        margin: 20px 0;
+    }
+    
     .qr-item {
         margin-bottom: 20px;
     }
@@ -74,18 +108,22 @@
     <p>Click the print button to print these QR codes. Make sure to use A4 size paper.</p>
 </div>
 
+<div class="qr-preview no-print">
+    <h4>QR Code Preview Hidden</h4>
+    <p>QR codes are hidden on screen but will appear when printed.</p>
+    <p>Total QR codes: {{ qrcodes.count }}</p>
+</div>
+
 <div class="print-section">
     {% for qrcode in qrcodes %}
         {% if forloop.first or forloop.counter0|divisibleby:12 %}
-        <div class="qr-row page-break">
+        <div class="page">
         {% endif %}
 
-        <div class="qr-item text-center">
-            <div class="border p-2">
-                <h5>{{ qrcode.product.name }}</h5>
-                <img src="{{ qrcode.generate_qr_code }}" alt="QR Code" class="qr-code mb-2">
-                <p class="mb-0"><small>Scan to redeem</small></p>
-            </div>
+        <div class="qr-item">
+            <h5>{{ qrcode.product.name }}</h5>
+            <img src="{{ qrcode.generate_qr_code }}" alt="QR Code" class="qr-code mb-2">
+            <p class="mb-0"><small>Scan to redeem</small></p>
         </div>
 
         {% if forloop.counter|divisibleby:12 or forloop.last %}
