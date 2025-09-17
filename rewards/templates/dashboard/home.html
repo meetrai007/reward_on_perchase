@@ -10,13 +10,22 @@
         border-radius: 12px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         overflow: hidden;
+        height: 280px; /* Fixed height for all cards */
+        display: flex;
+        flex-direction: column;
     }
     .quick-action-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
     }
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
     .action-icon {
-        font-size: 2rem;
+        font-size: 2.5rem;
         margin-bottom: 15px;
         display: inline-block;
         padding: 15px;
@@ -28,6 +37,8 @@
         border-radius: 25px;
         padding: 8px 20px;
         font-weight: 500;
+        margin-top: auto; /* Push button to bottom */
+        align-self: flex-start; /* Align button to left */
     }
     .action-button:hover {
         transform: scale(1.05);
@@ -43,6 +54,12 @@
     }
     .gradient-bg-4 {
         background: linear-gradient(45deg, #8E2DE2, #4A00E0);
+    }
+    .card-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 </style>
 {% endblock %}
@@ -95,11 +112,13 @@
             <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card quick-action-card text-white gradient-bg-1">
                     <div class="card-body text-center p-4">
-                        <div class="action-icon">
-                            <i class="fas fa-cube"></i>
+                        <div class="card-content">
+                            <div class="action-icon">
+                                <i class="fas fa-cube"></i>
+                            </div>
+                            <h5 class="card-title">Add New Product</h5>
+                            <p class="card-text">Create a new product to start generating QR codes</p>
                         </div>
-                        <h5 class="card-title">Add New Product</h5>
-                        <p class="card-text">Create a new product to start generating QR codes</p>
                         <a href="{% url 'product_create' %}" class="btn btn-light action-button">Get Started</a>
                     </div>
                 </div>
@@ -109,11 +128,13 @@
             <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card quick-action-card text-white gradient-bg-2">
                     <div class="card-body text-center p-4">
-                        <div class="action-icon">
-                            <i class="fas fa-qrcode"></i>
+                        <div class="card-content">
+                            <div class="action-icon">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <h5 class="card-title">Generate QR Codes</h5>
+                            <p class="card-text">Create QR codes for your products</p>
                         </div>
-                        <h5 class="card-title">Generate QR Codes</h5>
-                        <p class="card-text">Create QR codes for your products</p>
                         <a href="{% url 'qrcode_generate' %}" class="btn btn-light action-button">Generate</a>
                     </div>
                 </div>
@@ -123,11 +144,13 @@
             <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card quick-action-card text-white gradient-bg-3">
                     <div class="card-body text-center p-4">
-                        <div class="action-icon">
-                            <i class="fas fa-users"></i>
+                        <div class="card-content">
+                            <div class="action-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h5 class="card-title">View Users</h5>
+                            <p class="card-text">Manage and view all system users</p>
                         </div>
-                        <h5 class="card-title">View Users</h5>
-                        <p class="card-text">Manage and view all system users</p>
                         <a href="{% url 'user_list' %}" class="btn btn-light action-button">View All</a>
                     </div>
                 </div>
@@ -137,11 +160,13 @@
             <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card quick-action-card text-white gradient-bg-4">
                     <div class="card-body text-center p-4">
-                        <div class="action-icon">
-                            <i class="fas fa-gift"></i>
+                        <div class="card-content">
+                            <div class="action-icon">
+                                <i class="fas fa-gift"></i>
+                            </div>
+                            <h5 class="card-title">Reward History</h5>
+                            <p class="card-text">Track all redeemed rewards and activities</p>
                         </div>
-                        <h5 class="card-title">Reward History</h5>
-                        <p class="card-text">Track all redeemed rewards and activities</p>
                         <a href="{% url 'reward_history' %}" class="btn btn-light action-button">Check History</a>
                     </div>
                 </div>
@@ -153,5 +178,5 @@
 
 {% block extra_js %}
 <!-- Font Awesome for icons -->
-<script src="https://kit.fontawesome.com/your-font-awesome-kit.js" crossorigin="anonymous"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 {% endblock %}

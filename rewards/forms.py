@@ -45,14 +45,24 @@ class ProductForm(forms.ModelForm):
             }),
         }
 
+
 class QRCodeGenerateForm(forms.Form):
     product = forms.ModelChoiceField(
         queryset=Product.objects.filter(is_active=True),
-        empty_label="Select a product"
-    )  
+        empty_label="Select a product",
+        widget=forms.Select(attrs={
+            'class': 'form-select',  # Bootstrap dropdown styling
+            'aria-label': 'Select a product'
+        })
+    )
+
     quantity = forms.IntegerField(
         min_value=1,
         max_value=100,
         initial=10,
-        help_text="Number of QR codes to generate (max 100 at a time)"
+        help_text="Number of QR codes to generate (max 100 at a time)",
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',  # Bootstrap input styling
+            'placeholder': 'Enter quantity'
+        })
     )
