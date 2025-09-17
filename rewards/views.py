@@ -277,3 +277,16 @@ def export_rewards_csv(request):
         ])
     
     return response
+
+# Static pages for mobile app
+def about_page(request):
+    return render(request, 'mobile_pages/about.html')
+
+def contact_page(request):
+    return render(request, 'mobile_pages/contact.html')
+
+def privacy_policy_page(request):
+    return render(request, 'mobile_pages/privacy_policy.html')
+
+def delete_account_page(request):
+    return render(request, 'mobile_pages/delete_account.html')

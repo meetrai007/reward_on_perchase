@@ -176,8 +176,8 @@
         <table class="table table-hover">
             <thead>
                 <tr>
-                    <th>QR Code</th>
                     <th>UUID</th>
+                    <th>QR Code</th>
                     <th>Product</th>
                     <th>Status</th>
                     <th>Redeemed By</th>
@@ -189,10 +189,10 @@
                 {% for qrcode in page_obj %}
                 <tr>
                     <td>
-                        <img src="{{ qrcode.generate_qr_code }}" alt="QR Code" class="qr-code-img">
+                        <span class="uuid-text" title="{{ qrcode.code }}">{{ qrcode.code }}</span>
                     </td>
                     <td>
-                        <span class="uuid-text" title="{{ qrcode.code }}">{{ qrcode.code }}</span>
+                        <img src="{{ qrcode.generate_qr_code }}" alt="QR Code" class="qr-code-img">
                     </td>
                     <td>{{ qrcode.product.name }}</td>
                     <td>

@@ -33,4 +33,10 @@ urlpatterns = [
     # Export
     path('export/users/csv/', views.export_users_csv, name='export_users_csv'),
     path('export/rewards/csv/', views.export_rewards_csv, name='export_rewards_csv'),
+
+    # mobile apps pages 
+    path('mobile/about/', views.about_page, name='mobile_about'),
+    path('mobile/contact/', views.contact_page, name='mobile_contact'),
+    path('mobile/privacy-policy/', views.privacy_policy_page, name='mobile_privacy_policy'),
+    path('mobile/delete-account/', views.delete_account_page, name='mobile_delete_account'),
 ]
