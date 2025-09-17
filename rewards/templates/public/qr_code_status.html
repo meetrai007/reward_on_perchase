@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Status - Reward System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fb 0%, #e4e8f0 100%);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .status-card {
+            text-align: center;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .status-available {
+            background: linear-gradient(135deg, #4cc9f0 0%, #3a86ff 100%);
+            color: white;
+        }
+        
+        .status-redeemed {
+            background: linear-gradient(135deg, #f72585 0%, #b5179e 100%);
+            color: white;
+        }
+        
+        .status-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+        
+        .status-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .status-description {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .product-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 12px;
+            background: #f8f9fa;
+        }
+        
+        .product-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 10px;
+            object-fit: cover;
+            margin-right: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .product-details {
+            flex: 1;
+        }
+        
+        .product-name {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #3a0ca3;
+        }
+        
+        .product-description {
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .steps-container {
+            margin-top: 30px;
+        }
+        
+        .section-title {
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: #3a0ca3;
+            text-align: center;
+            position: relative;
+            padding-bottom: 10px;
+        }
+        
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: #4361ee;
+            border-radius: 3px;
+        }
+        
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .step {
+            flex-basis: calc(25% - 20px);
+            text-align: center;
+            padding: 20px 15px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            margin-bottom: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .step-icon {
+            font-size: 30px;
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            color: white;
+        }
+        
+        .step-1 .step-icon { background: #4361ee; }
+        .step-2 .step-icon { background: #f72585; }
+        .step-3 .step-icon { background: #4cc9f0; }
+        .step-4 .step-icon { background: #3a0ca3; }
+        
+        .step-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #3a0ca3;
+        }
+        
+        .step-description {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .app-download {
+            text-align: center;
+            padding: 25px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+        
+        .app-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #3a0ca3;
+        }
+        
+        .download-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .download-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 25px;
+            background: #3a0ca3;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .download-btn:hover {
+            background: #4361ee;
+        }
+        
+        .download-btn i {
+            margin-right: 8px;
+            font-size: 20px;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 768px) {
+            .steps {
+                flex-direction: column;
+            }
+            
+            .step {
+                flex-basis: 100%;
+                margin-bottom: 15px;
+            }
+            
+            .product-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .product-image {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .download-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>QR Code Status</h1>
+            <p>Check your reward redemption status</p>
+        </div>
+        
+        <div class="content">
+            <!-- Status Card -->
+            {% if status == "unused" %}
+            <div class="status-card status-available">
+                <div class="status-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="status-title">Available for Redemption</div>
+                <div class="status-description">This code has not been redeemed yet</div>
+            </div>
+            {% elif status == "redeemed" %}
+            <div class="status-card status-redeemed">
+                <div class="status-icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="status-title">Already Redeemed</div>
+                <div class="status-description">This code has already been redeemed</div>
+            </div>
+            {% endif %}
+            
+            
+            <!-- Redemption Steps -->
+            <div class="steps-container">
+                <h2 class="section-title">How to Redeem Your Reward</h2>
+                <div class="steps">
+                    <div class="step step-1">
+                        <div class="step-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div class="step-title">Step 1</div>
+                        <div class="step-description">Download our app and redeem your code</div>
+                    </div>
+                    
+                    <div class="step step-2">
+                        <div class="step-icon">
+                            <i class="fas fa-user-edit"></i>
+                        </div>
+                        <div class="step-title">Step 2</div>
+                        <div class="step-description">Update your profile with your details</div>
+                    </div>
+                    
+                    <div class="step step-3">
+                        <div class="step-icon">
+                            <i class="fas fa-credit-card"></i>
+                        </div>
+                        <div class="step-title">Step 3</div>
+                        <div class="step-description">Add your payment option for verification</div>
+                    </div>
+                    
+                    <div class="step step-4">
+                        <div class="step-icon">
+                            <i class="fas fa-gift"></i>
+                        </div>
+                        <div class="step-title">Step 4</div>
+                        <div class="step-description">Redeem and share a selfie with your product</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- App Download Section -->
+            <div class="app-download">
+                <div class="app-title">Download Our App to Redeem Your Reward</div>
+                <p>Scan QR codes, claim rewards, and manage your account all in one place</p>
+                
+                <div class="download-buttons">
+                    <a href="#" class="download-btn">
+                        <i class="fab fa-apple"></i>
+                        App Store
+                    </a>
+                    <a href="#" class="download-btn">
+                        <i class="fab fa-google-play"></i>
+                        Google Play
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Need help? Contact support@rewardapp.com</p>
+            <p>© 2023 Reward App. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        // Simple animation for elements when they come into view
+        document.addEventListener('DOMContentLoaded', function() {
+            const steps = document.querySelectorAll('.step');
+            
+            steps.forEach((step, index) => {
+                // Add delay based on index for sequential animation
+                step.style.transitionDelay = (index * 0.1) + 's';
+            });
+            
+        });
+    </script>
+</body>
+</html>

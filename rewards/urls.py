@@ -39,4 +39,8 @@ urlpatterns = [
     path('mobile/contact/', views.contact_page, name='mobile_contact'),
     path('mobile/privacy-policy/', views.privacy_policy_page, name='mobile_privacy_policy'),
     path('mobile/delete-account/', views.delete_account_page, name='mobile_delete_account'),
+
+    # to check redeem code status   
+    path('redeem/<uuid:uuid_str>/', views.qr_code_status, name='qr_code_status'),
+
 ]

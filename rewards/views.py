@@ -8,7 +8,9 @@ from django.core.paginator import Paginator
 import csv
 from .models import Product, ProductQRCode, User, RewardHistory, ProductCategory, PaymentOption
 from .forms import ProductForm, QRCodeGenerateForm
-
+from django.shortcuts import get_object_or_404, render
+from django.http import HttpResponseNotFound
+from .models import ProductQRCode
 from django.contrib.auth import login as auth_login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from .forms import AdminAuthenticationForm
@@ -277,6 +279,29 @@ def export_rewards_csv(request):
         ])
     
     return response
+
+
+def qr_code_status(request, uuid_str):
+    try:
+        # Find the QR code by its UUID - fixed the typo and removed unnecessary loop
+        qr_code = ProductQRCode.objects.filter(code=uuid_str).first()
+        
+        if not qr_code:
+            return HttpResponseNotFound("QR code not found")
+            
+        context = {
+            'status': qr_code.status,
+        }
+        
+        return render(request, 'public/qr_code_status.html', context)
+        
+    except Exception as e:
+        # Handle any errors
+        return HttpResponseNotFound("Invalid QR code")
+        
+    except Exception as e:
+        # Handle any errors
+        return HttpResponseNotFound("Invalid QR code")
 
 # Static pages for mobile app
 def about_page(request):

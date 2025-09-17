@@ -120,7 +120,7 @@ class ProductQRCode(models.Model):
         )
         
         # Add data - using the code as redemption data
-        redemption_url = f"https://yourdomain.com/redeem/{self.code}/"
+        redemption_url = f"http://192.168.1.9:8000/redeem/{self.code}/"
         qr.add_data(redemption_url)
         qr.make(fit=True)
         
