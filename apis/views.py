@@ -191,14 +191,14 @@ def reward_summary(request):
         user=request.user
     ).aggregate(total=Sum('points_earned'))['total'] or 0
 
-    redeemable_points = RedemptionRequest.objects.filter(
+    redeemed_points = RedemptionRequest.objects.filter(
         user=request.user,
         status='pending'
     ).aggregate(total=Sum('points'))['total'] or 0
 
     return Response({
         'total_points': total_points,
-        'redeemable_points': redeemable_points
+        'redeemed_points': redeemed_points
     })
 
 
