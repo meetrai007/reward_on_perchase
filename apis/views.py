@@ -191,7 +191,7 @@ def payment_methods(request):
 def scan_qr_code(request):
     qr_code = request.data.get('qr_code')
     try:
-        product_qr = ProductQRCode.objects.get(code=qr_code, status='unused')
+        product_qr = ProductQRCode.objects.get_by_plain_code(qr_code, status='unused')
         product_qr.status = 'redeemed'
         product_qr.redeemed_by = request.user
         product_qr.redeemed_at = timezone.now()

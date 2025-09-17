@@ -4,6 +4,10 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 import qrcode
 from django.core.files.base import ContentFile
+from django.db import models
+from django.conf import settings
+import uuid
+
 
 # Custom User Manager for phone-based login
 class UserManager(BaseUserManager):
@@ -76,7 +80,7 @@ class Product(models.Model):
     category = models.ForeignKey(ProductCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name="products")
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to="products/", blank=True, null=True)
+    image = models.ImageField(upload_to="media/products/", blank=True, null=True)
     points = models.PositiveIntegerField(default=0)  # reward points for this product
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -84,10 +88,6 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
-
-from django.db import models
-from django.conf import settings
-import uuid
 
 
 # QR Code Model
