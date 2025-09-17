@@ -4,12 +4,18 @@
 
 {% block extra_css %}
 <style>
+    /* Hide QR codes on screen */
+    .print-section {
+        display: none;
+    }
+
     @media print {
         body * {
             visibility: hidden;
         }
         .print-section, .print-section * {
             visibility: visible;
+            display: block;
         }
         .print-section {
             position: absolute;
@@ -20,19 +26,66 @@
         .no-print {
             display: none !important;
         }
+
+        .page {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 QR codes per row */
+            grid-auto-rows: auto;
+            gap: 10px;
+            justify-items: center; /* Center items horizontally */
+            align-items: center; /* Center items vertically */
+            margin: 0 auto; /* Center the grid on the page */
+            width: 100%;
+        }
+
+        .qr-item {
+            break-inside: avoid;
+            text-align: center;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%; /* Ensure full width of grid cell */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center content horizontally */
+            justify-content: center; /* Center content vertically */
+            height: 100%; /* Fill the grid cell */
+        }
+
+        .qr-code {
+            max-width: 150px;
+            width: 100%;
+            margin: 0 auto; /* Center the image */
+            display: block;
+        }
+        
+        h5 {
+            margin: 5px 0;
+            text-align: center;
+            width: 100%;
+        }
+        
+        p {
+            margin: 2px 0;
+            text-align: center;
+            width: 100%;
+        }
     }
-    .qr-code {
-        width: 100%;
-        max-width: 200px;
-    }
-    .qr-item {
-        page-break-inside: avoid;
-    }
+
+    /* screen display */
     .filter-info {
         margin-bottom: 20px;
         padding: 10px;
         background-color: #f8f9fa;
         border-radius: 5px;
+    }
+    
+    .qr-preview {
+        text-align: center;
+        padding: 20px;
+        border: 2px dashed #ccc;
+        border-radius: 5px;
+        margin: 20px 0;
     }
 </style>
 {% endblock %}
@@ -61,8 +114,14 @@
     {% endif %}
 </div>
 
+<div class="qr-preview no-print">
+    <h4>QR Code Preview Hidden</h4>
+    <p>QR codes are hidden on screen but will appear when printed.</p>
+    <p>Total QR codes: {{ qrcodes.count }}</p>
+</div>
+
 <div class="print-section">
-    <div class="filter-info no-print">
+    <div class="filter-info">
         <h4>Filtered QR Codes</h4>
         {% if product_filter or status_filter %}
         <p><strong>Filters Applied:</strong>
@@ -74,24 +133,25 @@
         {% endif %}
         <p>Total: {{ qrcodes.count }} QR codes</p>
     </div>
-    
-    <div class="row">
-        {% for qrcode in qrcodes %}
-        <div class="col-md-3 qr-item text-center mb-4">
-            <div class="border p-2">
-                <h5>{{ qrcode.product.name }}</h5>
-                <p><strong>Points:</strong> {{ qrcode.product.points }}</p>
-                <img src="{{ qrcode.generate_qr_code }}" alt="QR Code" class="qr-code mb-2">
-                <p class="mb-0"><small>{{ qrcode.code }}</small></p>
-                <p class="mb-0"><small>Status: {{ qrcode.status|title }}</small></p>
-                <p class="mb-0"><small>Scan to redeem</small></p>
-            </div>
-        </div>
-        {% if forloop.counter|divisibleby:4 and not forloop.last %}
-        </div>
-        <div class="row">
+
+    {% comment %}
+        Print pages: 3 columns × 4 rows = 12 QR codes per page
+    {% endcomment %}
+    {% for qrcode in qrcodes %}
+        {% if forloop.first or forloop.counter0|divisibleby:12 %}
+        <div class="page">
         {% endif %}
-        {% endfor %}
-    </div>
+
+        <div class="qr-item">
+            <h5>{{ qrcode.product.name }}</h5>
+            <img src="{{ qrcode.generate_qr_code }}" alt="QR Code" class="qr-code mb-2">
+            <p class="mb-0"><small>Status: {{ qrcode.status|title }}</small></p>
+            <p class="mb-0"><small>Scan to redeem</small></p>
+        </div>
+
+        {% if forloop.counter|divisibleby:12 or forloop.last %}
+        </div>
+        {% endif %}
+    {% endfor %}
 </div>
 {% endblock %}
