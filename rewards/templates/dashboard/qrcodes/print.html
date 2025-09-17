@@ -4,31 +4,56 @@
 
 {% block extra_css %}
 <style>
+    /* Print styles */
     @media print {
         body * {
             visibility: hidden;
         }
+
         .print-section, .print-section * {
             visibility: visible;
         }
+
         .print-section {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
         }
+
         .no-print {
             display: none !important;
         }
+
+        /* Force 3 columns per row in print */
+        .qr-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .qr-item {
+            width: 33.33%; /* 3 items per row */
+            box-sizing: border-box;
+            padding: 5px;
+            page-break-inside: avoid;
+        }
+
+        /* Page break after 12 items (3x4) */
+        .page-break {
+            page-break-after: always;
+        }
+
+        .qr-code {
+            width: 100%;
+            max-width: 150px;
+        }
     }
-    .qr-code {
-        width: 100%;
-        max-width: 200px;
-    }
+
+    /* Screen styles */
     .qr-item {
-        page-break-inside: avoid;
+        margin-bottom: 20px;
     }
-}
 </style>
 {% endblock %}
 
@@ -50,22 +75,22 @@
 </div>
 
 <div class="print-section">
-    <div class="row">
-        {% for qrcode in qrcodes %}
-        <div class="col-md-3 qr-item text-center mb-4">
+    {% for qrcode in qrcodes %}
+        {% if forloop.first or forloop.counter0|divisibleby:12 %}
+        <div class="qr-row page-break">
+        {% endif %}
+
+        <div class="qr-item text-center">
             <div class="border p-2">
                 <h5>{{ qrcode.product.name }}</h5>
-                <p><strong>Points:</strong> {{ qrcode.product.points }}</p>
                 <img src="{{ qrcode.generate_qr_code }}" alt="QR Code" class="qr-code mb-2">
-                <p class="mb-0"><small>{{ qrcode.code }}</small></p>
                 <p class="mb-0"><small>Scan to redeem</small></p>
             </div>
         </div>
-        {% if forloop.counter|divisibleby:4 and not forloop.last %}
+
+        {% if forloop.counter|divisibleby:12 or forloop.last %}
         </div>
-        <div class="row">
         {% endif %}
-        {% endfor %}
-    </div>
+    {% endfor %}
 </div>
 {% endblock %}
