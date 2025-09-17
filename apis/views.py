@@ -53,7 +53,7 @@ def send_otp(request):
 
         # store OTP in cache with expiry (e.g. 5 minutes = 300 sec)
         cache.set(cache_key, otp, timeout=300)
-        logger.info("OTP generated and cached", extra={'phone_suffix': str(phone)[-4:] if phone else None})
+        logger.info(f"OTP generated and cached {otp}", extra={'phone_suffix': str(phone)[-4:] if phone else None})
 
         # for testing, return OTP in response
         return Response({'message': 'OTP sent successfully', 'otp': otp}, status=status.HTTP_200_OK)
@@ -191,7 +191,7 @@ def payment_methods(request):
 def scan_qr_code(request):
     qr_code = request.data.get('qr_code')
     try:
-        product_qr = ProductQRCode.objects.get_by_plain_code(qr_code, status='unused')
+        product_qr = ProductQRCode.objects.get(code=qr_code, status='unused')
         product_qr.status = 'redeemed'
         product_qr.redeemed_by = request.user
         product_qr.redeemed_at = timezone.now()
