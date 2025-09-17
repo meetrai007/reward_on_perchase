@@ -15,6 +15,7 @@ from datetime import timedelta
 from pathlib import Path
 from decouple import config
 from dotenv import load_dotenv
+from .logging_config import LOGGING as PROJECT_LOGGING
 
 # Load .env
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -188,3 +189,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # SMS Configuration
 SMS_API_KEY = 'your_sms_api_key'
 SMS_API_URL = 'https://api.msg91.com/api/v2/sendsms'
+
+# Centralized logging configuration
+LOGGING = PROJECT_LOGGING
