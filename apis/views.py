@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 import random
 from apis.serializers import PaymentOptionSerializer, RewardHistorySerializer, UserProfileSerializer
 from rewards.models import PaymentOption, ProductQRCode, RedemptionRequest, RewardHistory, User
@@ -190,9 +191,14 @@ def reward_summary(request):
         user=request.user
     ).aggregate(total=Sum('points_earned'))['total'] or 0
 
+    redeemable_points = RedemptionRequest.objects.filter(
+        user=request.user,
+        status='pending'
+    ).aggregate(total=Sum('points'))['total'] or 0
+
     return Response({
         'total_points': total_points,
-        'redeemable_points': total_points
+        'redeemable_points': redeemable_points
     })
 
 
@@ -211,38 +217,75 @@ def reward_history(request):
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'points': openapi.Schema(type=openapi.TYPE_INTEGER, description="Points to redeem"),
-            'payment_method_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="Payment Method ID"),
+            "points": openapi.Schema(
+                type=openapi.TYPE_INTEGER, description="Points to redeem"
+            ),
+            "payment_method_id": openapi.Schema(
+                type=openapi.TYPE_INTEGER, description="Payment Method ID"
+            ),
+            "photo": openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_BINARY,   # <-- file input in Swagger
+                description="Product photo",
+            ),
         },
-        required=['points', 'payment_method_id'],
+        required=["points", "payment_method_id", "photo"],
     ),
-    responses={200: "Redemption created", 400: "Insufficient points"},
+    responses={
+        200: "Redemption created successfully",
+        400: "Invalid request / insufficient points",
+    },
 )
-@api_view(['POST'])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def redeem_points(request):
-    points_to_redeem = request.data.get('points')
-    payment_method_id = request.data.get('payment_method_id')
+    """Redeem reward points by selecting a payment method and uploading a proof photo."""
+    points_to_redeem = int(request.data.get("points", 0))
+    payment_method_id = request.data.get("payment_method_id")
+    photo = request.FILES.get("photo")  # <-- uploaded file
 
-    total_points = RewardHistory.objects.filter(
-        user=request.user
-    ).aggregate(total=Sum('points_earned'))['total'] or 0
+    # total earned points
+    total_points = (
+        RewardHistory.objects.filter(user=request.user).aggregate(
+            total=Sum("points_earned")
+        )["total"]
+        or 0
+    )
 
+    # check if user has enough points
     if points_to_redeem > total_points:
-        return Response({'error': 'Insufficient points'},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Insufficient points"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
+    # check if payment method exists
+    try:
+        payment_method = PaymentOption.objects.get(id=payment_method_id)
+    except PaymentOption.DoesNotExist:
+        return Response(
+            {"error": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # create redemption request
     redemption = RedemptionRequest.objects.create(
         user=request.user,
         points=points_to_redeem,
-        payment_method_id=payment_method_id,
-        status='pending'
+        payment_method=payment_method,
+        status="pending",
+        photo=photo,
     )
 
-    return Response({
-        'success': True,
-        'redemption_id': redemption.id,
-        'status': 'pending'
-    })
+    return Response(
+        {
+            "success": True,
+            "redemption_id": redemption.id,
+            "status": redemption.status,
+            "photo_url": redemption.photo.url if redemption.photo else None,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 
 
 @api_view(['GET'])

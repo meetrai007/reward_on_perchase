@@ -149,7 +149,6 @@ class RewardHistory(models.Model):
         return f"{self.user.phone} earned {self.points_earned} points"
 
 
-# models.py
 class RedemptionRequest(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),
@@ -160,6 +159,7 @@ class RedemptionRequest(models.Model):
     points = models.PositiveIntegerField()
     payment_method = models.ForeignKey(PaymentOption, on_delete=models.CASCADE)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    photo = models.ImageField(upload_to="redemptions/", blank=True, null=True)  # <-- added field
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
