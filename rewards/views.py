@@ -40,6 +40,7 @@ def admin_login(request):
             form = AdminAuthenticationForm()
         
         return render(request, 'admin/login.html', {'form': form})
+        
     except Exception:
         logger.exception("Unexpected error in admin_login", extra={'path': request.path})
         messages.error(request, 'Unexpected error. Please try again.')
