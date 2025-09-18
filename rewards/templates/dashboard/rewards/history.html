@@ -64,7 +64,7 @@
                     <td>{{ reward.product.name|default:"N/A" }}</td>
                     <td>{{ reward.points_earned }}</td>
                     <td>
-                        <span class="uuid-text" title="{{ reward.qr_code.code }}">{{ reward.qr_code.code }}</span>
+                        <span class="uuid-text" title="{{ reward.qr_code.decrypted_code }}">{{ reward.qr_code.decrypted_code }}</span>
                     </td>
                     <td>{{ reward.created_at|date:"M d, Y H:i" }}</td>
                 </tr>

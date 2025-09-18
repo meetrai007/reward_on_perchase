@@ -28,6 +28,8 @@ LOGGING = {
             'interval': 1,
             'backupCount': 7,
             'formatter': 'verbose',
+            "delay": True,
+
         },
         'error_file': {
             'level': 'ERROR',

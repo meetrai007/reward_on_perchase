@@ -14,6 +14,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import logging
+import hashlib
+
 
 
 logger = logging.getLogger('apis')
@@ -175,7 +177,6 @@ def payment_methods(request):
         logger.exception("Error in payment_methods", extra={'user_id': getattr(request.user, 'id', None)})
         return Response({'error': 'Failed to process request'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @swagger_auto_schema(
     method="post",
     request_body=openapi.Schema(
@@ -189,33 +190,42 @@ def payment_methods(request):
 )
 @api_view(['POST'])
 def scan_qr_code(request):
-    qr_code = request.data.get('qr_code')
+    qr_code = request.data.get('qr_code')  # plain UUID from QR
+
+    if not qr_code:
+        return Response({'error': 'QR code required'}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
-        product_qr = ProductQRCode.objects.get(code=qr_code, status='unused')
+        # Deterministic lookup with hash
+        qr_hash = hashlib.sha256(qr_code.encode()).hexdigest()
+        product_qr = ProductQRCode.objects.get(code_hash=qr_hash, status='unused')
+
         product_qr.status = 'redeemed'
         product_qr.redeemed_by = request.user
         product_qr.redeemed_at = timezone.now()
         product_qr.save()
 
-        reward = RewardHistory.objects.create(
+        RewardHistory.objects.create(
             user=request.user,
             product=product_qr.product,
             qr_code=product_qr,
             points_earned=product_qr.product.points
         )
-        logger.info("QR code redeemed", extra={'user_id': getattr(request.user, 'id', None), 'qr_code': str(qr_code)})
+
+        logger.info("QR code redeemed", extra={'user_id': getattr(request.user, 'id', None), 'qr_code': qr_code})
 
         return Response({
             'success': True,
             'points_earned': product_qr.product.points,
             'product_name': product_qr.product.name
         })
+
     except ProductQRCode.DoesNotExist:
-        logger.warning("Invalid or used QR code", extra={'qr_code': str(qr_code)})
-        return Response({'error': 'Invalid or already used QR code'},
-                        status=status.HTTP_400_BAD_REQUEST)
+        logger.warning("Invalid or used QR code", extra={'qr_code': qr_code})
+        return Response({'error': 'Invalid or already used QR code'}, status=status.HTTP_400_BAD_REQUEST)
+
     except Exception:
-        logger.exception("Unexpected error in scan_qr_code", extra={'qr_code': str(qr_code)})
+        logger.exception("Unexpected error in scan_qr_code", extra={'qr_code': qr_code})
         return Response({'error': 'Failed to process QR code'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

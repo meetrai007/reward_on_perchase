@@ -70,7 +70,7 @@
                 {% for qrcode in page_obj %}
                 <tr>
                     <td>
-                        <span class="uuid-text" title="{{ qrcode.code }}">{{ qrcode.code }}</span>
+                        <span class="uuid-text" title="{{ qrcode.decrypted_code }}">{{ qrcode.decrypted_code }}</span>
                     </td>
                     <td>
                         <img src="{{ qrcode.generate_qr_code }}" alt="QR Code" class="qr-code-img">
