@@ -296,6 +296,14 @@
                 <div class="status-title">Already Redeemed</div>
                 <div class="status-description">This code has already been redeemed</div>
             </div>
+            {% elif status == "Invalid" %}
+            <div class="status-card status-redeemed">
+                <div class="status-icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="status-title">Invalid QR code</div>
+                <div class="status-description">This is nvalid QR code use another one</div>
+            </div>
             {% endif %}
             
             

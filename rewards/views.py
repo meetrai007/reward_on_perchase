@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.contrib import messages
 from django.core.paginator import Paginator
 import csv
+import hashlib
 import logging
 from .models import Product, ProductQRCode, User, RewardHistory, PaymentOption
 from .forms import ProductForm, QRCodeGenerateForm
@@ -315,14 +316,25 @@ def export_users_csv(request):
         writer = csv.writer(response)
         writer.writerow(['Phone', 'City', 'Profession', 'Date Joined', 'Last Login'])
         
-        rows = list(User.objects.all().values_list('phone', 'city', 'profession', 'date_joined', 'last_login'))
-        for row in rows:
-            writer.writerow(row)
+        users = User.objects.all().values_list('phone', 'city', 'profession', 'date_joined', 'last_login')
+        rows = []
+        for phone, city, profession, date_joined, last_login in users:
+            rows.append([
+                str(phone) if phone else '',  # phone as string
+                city or '',
+                profession or '',
+                date_joined.strftime("%b %d %Y") if date_joined else '',
+                last_login.strftime("%b %d %Y") if last_login else ''
+            ])
+            writer.writerow(rows[-1])
+        
         logger.info("Users CSV exported", extra={'count': len(rows)})
         return response
     except Exception:
         logger.exception("Failed to export users CSV")
         return HttpResponse("Failed to export users", status=500)
+
+
 
 @login_required
 @user_passes_test(is_staff_user)
@@ -333,17 +345,18 @@ def export_rewards_csv(request):
         
         writer = csv.writer(response)
         writer.writerow(['User Phone', 'Product', 'Points Earned', 'Date'])
-        
+
         rewards = RewardHistory.objects.select_related('user', 'product').all()
         count = 0
         for reward in rewards:
             writer.writerow([
-                reward.user.phone,
+                str(reward.user.phone),  # ensure phone is string
                 reward.product.name if reward.product else 'N/A',
                 reward.points_earned,
-                reward.created_at
+                reward.created_at.strftime("%b %d %Y")  # e.g. Aug 13 2025
             ])
             count += 1
+
         logger.info("Rewards CSV exported", extra={'count': count})
         return response
     except Exception:
@@ -353,18 +366,28 @@ def export_rewards_csv(request):
 
 def qr_code_status(request, uuid_str):
     try:
-        qr_code = ProductQRCode.objects.filter(code=uuid_str).first()
+        # Ensure uuid_str is always a string before hashing
+        plain_code = str(uuid_str)
+        code_hash = hashlib.sha256(plain_code.encode()).hexdigest()
+
+        qr_code = ProductQRCode.objects.filter(code_hash=code_hash).first()
         if not qr_code:
-            logger.warning("QR code not found", extra={'code': uuid_str})
-            return HttpResponseNotFound("QR code not found")
-        context = {
+            logger.warning("QR code not found", extra={'code': plain_code})
+            return render(request, 'public/qr_code_status.html', {
+                'status': "Invalid",
+            })
+
+        logger.debug("QR code status fetched", extra={'code': plain_code, 'status': qr_code.status})
+        return render(request, 'public/qr_code_status.html', {
             'status': qr_code.status,
-        }
-        logger.debug("QR code status fetched", extra={'code': uuid_str, 'status': qr_code.status})
-        return render(request, 'public/qr_code_status.html', context)
+        })
+
     except Exception:
-        logger.exception("Error resolving qr_code_status", extra={'code': uuid_str})
-        return HttpResponseNotFound("Invalid QR code")
+        logger.exception("Error resolving qr_code_status", extra={'code': str(uuid_str)})
+        return render(request, 'public/qr_code_status.html', {
+            'status': "Invalid",
+        })
+
 
 # Static pages for mobile app
 def about_page(request):
