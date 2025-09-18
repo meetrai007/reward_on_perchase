@@ -34,7 +34,6 @@ local_settings.py
 # Media & Static (generated)
 media/
 staticfiles/
-static/
 collected_static/
 .env
 
