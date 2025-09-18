@@ -13,6 +13,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+import logging
+import hashlib
+
+
+
+logger = logging.getLogger('apis')
 
 
 def otp_is_valid(phone, otp):
@@ -43,14 +49,19 @@ def otp_is_valid(phone, otp):
 @permission_classes([AllowAny])
 def send_otp(request):
     phone = request.data.get('phone')
-    otp = str(random.randint(1000, 9999))  # store as string for consistency
-    cache_key = f"otp_{phone}"
+    try:
+        otp = str(random.randint(1000, 9999))  # store as string for consistency
+        cache_key = f"otp_{phone}"
 
-    # store OTP in cache with expiry (e.g. 5 minutes = 300 sec)
-    cache.set(cache_key, otp, timeout=300)
+        # store OTP in cache with expiry (e.g. 5 minutes = 300 sec)
+        cache.set(cache_key, otp, timeout=300)
+        logger.info(f"OTP generated and cached {otp}", extra={'phone_suffix': str(phone)[-4:] if phone else None})
 
-    # for testing, return OTP in response
-    return Response({'message': 'OTP sent successfully', 'otp': otp}, status=status.HTTP_200_OK)
+        # for testing, return OTP in response
+        return Response({'message': 'OTP sent successfully', 'otp': otp}, status=status.HTTP_200_OK)
+    except Exception:
+        logger.exception("Failed to send OTP", extra={'phone': phone})
+        return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -72,27 +83,35 @@ def send_otp(request):
 def verify_otp(request):
     phone = request.data.get('phone')
     otp = request.data.get('otp')
+    try:
+        if otp_is_valid(phone, otp):
+            user, created = User.objects.get_or_create(phone=phone)
+            if created:
+                user.is_phone_verified = True
+                user.save()
+                refresh = RefreshToken.for_user(user)
+                logger.info("New user created via OTP", extra={'user_id': user.id})
+                return Response({
+                    'new_user': True,
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                })
 
-    if otp_is_valid(phone, otp):
-        user, created = User.objects.get_or_create(phone=phone)
-        if created:
-            user.is_phone_verified = True
-            user.save()
             refresh = RefreshToken.for_user(user)
+            logger.info("OTP verified for existing user", extra={'user_id': user.id})
             return Response({
-                'new_user': True,
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
+                'profile_complete': bool(user.city and user.profession)
             })
-
-
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'profile_complete': bool(user.city and user.profession)
-        })
-    return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        logger.warning("Invalid OTP attempt", extra={'phone': phone})
+        return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+    except TokenError:
+        logger.exception("Token generation error", extra={'phone': phone})
+        return Response({'error': 'Token generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception:
+        logger.exception("Unexpected error in verify_otp", extra={'phone': phone})
+        return Response({'error': 'Verification failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -116,16 +135,22 @@ def verify_otp(request):
 )
 @api_view(['GET', 'PUT'])
 def user_profile(request):
-    if request.method == 'GET':
-        serializer = UserProfileSerializer(request.user)
-        return Response(serializer.data)
-
-    elif request.method == 'PUT':
-        serializer = UserProfileSerializer(request.user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
+    try:
+        if request.method == 'GET':
+            serializer = UserProfileSerializer(request.user)
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        elif request.method == 'PUT':
+            serializer = UserProfileSerializer(request.user, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                logger.info("User profile updated", extra={'user_id': getattr(request.user, 'id', None)})
+                return Response(serializer.data)
+            logger.warning("User profile validation failed", extra={'errors': serializer.errors})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        logger.exception("Error in user_profile", extra={'user_id': getattr(request.user, 'id', None)})
+        return Response({'error': 'Failed to process request'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
     method="post",
@@ -134,18 +159,23 @@ def user_profile(request):
 )
 @api_view(['GET', 'POST'])
 def payment_methods(request):
-    if request.method == 'GET':
-        payments = PaymentOption.objects.filter(user=request.user)
-        serializer = PaymentOptionSerializer(payments, many=True)
-        return Response(serializer.data)
+    try:
+        if request.method == 'GET':
+            payments = PaymentOption.objects.filter(user=request.user)
+            serializer = PaymentOptionSerializer(payments, many=True)
+            return Response(serializer.data)
 
-    elif request.method == 'POST':
-        serializer = PaymentOptionSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        elif request.method == 'POST':
+            serializer = PaymentOptionSerializer(data=request.data)
+            if serializer.is_valid():
+                obj = serializer.save(user=request.user)
+                logger.info("Payment method created", extra={'user_id': getattr(request.user, 'id', None), 'payment_id': getattr(obj, 'id', None)})
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            logger.warning("Payment method create validation failed", extra={'errors': serializer.errors})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception:
+        logger.exception("Error in payment_methods", extra={'user_id': getattr(request.user, 'id', None)})
+        return Response({'error': 'Failed to process request'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
     method="post",
@@ -160,56 +190,78 @@ def payment_methods(request):
 )
 @api_view(['POST'])
 def scan_qr_code(request):
-    qr_code = request.data.get('qr_code')
+    qr_code = request.data.get('qr_code')  # plain UUID from QR
+
+    if not qr_code:
+        return Response({'error': 'QR code required'}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
-        product_qr = ProductQRCode.objects.get(code=qr_code, status='unused')
+        # Deterministic lookup with hash
+        qr_hash = hashlib.sha256(qr_code.encode()).hexdigest()
+        product_qr = ProductQRCode.objects.get(code_hash=qr_hash, status='unused')
+
         product_qr.status = 'redeemed'
         product_qr.redeemed_by = request.user
         product_qr.redeemed_at = timezone.now()
         product_qr.save()
 
-        reward = RewardHistory.objects.create(
+        RewardHistory.objects.create(
             user=request.user,
             product=product_qr.product,
             qr_code=product_qr,
             points_earned=product_qr.product.points
         )
 
+        logger.info("QR code redeemed", extra={'user_id': getattr(request.user, 'id', None), 'qr_code': qr_code})
+
         return Response({
             'success': True,
             'points_earned': product_qr.product.points,
             'product_name': product_qr.product.name
         })
+
     except ProductQRCode.DoesNotExist:
-        return Response({'error': 'Invalid or already used QR code'},
-                        status=status.HTTP_400_BAD_REQUEST)
+        logger.warning("Invalid or used QR code", extra={'qr_code': qr_code})
+        return Response({'error': 'Invalid or already used QR code'}, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception:
+        logger.exception("Unexpected error in scan_qr_code", extra={'qr_code': qr_code})
+        return Response({'error': 'Failed to process QR code'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
 def reward_summary(request):
-    total_points = RewardHistory.objects.filter(
-        user=request.user
-    ).aggregate(total=Sum('points_earned'))['total'] or 0
+    try:
+        total_points = RewardHistory.objects.filter(
+            user=request.user
+        ).aggregate(total=Sum('points_earned'))['total'] or 0
 
-    redeemed_points = RedemptionRequest.objects.filter(
-        user=request.user,
-        status='pending'
-    ).aggregate(total=Sum('points'))['total'] or 0
+        redeemed_points = RedemptionRequest.objects.filter(
+            user=request.user,
+            status='pending'
+        ).aggregate(total=Sum('points'))['total'] or 0
 
-    return Response({
-        'total_points': total_points,
-        'redeemed_points': redeemed_points
-    })
+        return Response({
+            'total_points': total_points,
+            'redeemed_points': redeemed_points
+        })
+    except Exception:
+        logger.exception("Error in reward_summary", extra={'user_id': getattr(request.user, 'id', None)})
+        return Response({'error': 'Failed to load summary'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
 def reward_history(request):
-    history = RewardHistory.objects.filter(
-        user=request.user
-    ).order_by('-created_at')
+    try:
+        history = RewardHistory.objects.filter(
+            user=request.user
+        ).order_by('-created_at')
 
-    serializer = RewardHistorySerializer(history, many=True)
-    return Response(serializer.data)
+        serializer = RewardHistorySerializer(history, many=True)
+        return Response(serializer.data)
+    except Exception:
+        logger.exception("Error in reward_history", extra={'user_id': getattr(request.user, 'id', None)})
+        return Response({'error': 'Failed to load history'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @swagger_auto_schema(
@@ -240,70 +292,96 @@ def reward_history(request):
 @permission_classes([AllowAny])
 def redeem_points(request):
     """Redeem reward points by selecting a payment method and uploading a proof photo."""
-    points_to_redeem = int(request.data.get("points", 0))
-    payment_method_id = request.data.get("payment_method_id")
-    photo = request.FILES.get("photo")  # <-- uploaded file
+    # Guard: must be authenticated (endpoint currently AllowAny)
+    if not getattr(request.user, 'is_authenticated', False):
+        logger.warning("Unauthenticated redeem_points attempt")
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    # total earned points
-    total_points = (
-        RewardHistory.objects.filter(user=request.user).aggregate(
-            total=Sum("points_earned")
-        )["total"]
-        or 0
-    )
-
-    # check if user has enough points
-    if points_to_redeem > total_points:
-        return Response(
-            {"error": "Insufficient points"}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    # check if payment method exists
     try:
-        payment_method = PaymentOption.objects.get(id=payment_method_id)
-    except PaymentOption.DoesNotExist:
-        return Response(
-            {"error": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST
+        points_str = request.data.get("points", 0)
+        try:
+            points_to_redeem = int(points_str)
+        except (TypeError, ValueError):
+            logger.warning("Invalid points value", extra={'points': points_str})
+            return Response({"error": "Invalid points"}, status=status.HTTP_400_BAD_REQUEST)
+
+        payment_method_id = request.data.get("payment_method_id")
+        photo = request.FILES.get("photo")  # <-- uploaded file
+
+        if not payment_method_id or photo is None:
+            logger.warning("Missing fields for redemption", extra={'payment_method_id': payment_method_id, 'has_photo': photo is not None})
+            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # total earned points
+        total_points = (
+            RewardHistory.objects.filter(user=request.user).aggregate(
+                total=Sum("points_earned")
+            )["total"]
+            or 0
         )
 
-    # create redemption request
-    redemption = RedemptionRequest.objects.create(
-        user=request.user,
-        points=points_to_redeem,
-        payment_method=payment_method,
-        status="pending",
-        photo=photo,
-    )
+        # check if user has enough points
+        if points_to_redeem > total_points:
+            logger.info("Insufficient points for redemption", extra={'user_id': getattr(request.user, 'id', None), 'requested': points_to_redeem, 'available': total_points})
+            return Response(
+                {"error": "Insufficient points"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-    return Response(
-        {
-            "success": True,
-            "redemption_id": redemption.id,
-            "status": redemption.status,
-            "photo_url": redemption.photo.url if redemption.photo else None,
-        },
-        status=status.HTTP_200_OK,
-    )
+        # check if payment method exists
+        try:
+            payment_method = PaymentOption.objects.get(id=payment_method_id)
+        except PaymentOption.DoesNotExist:
+            logger.warning("Invalid payment method for redemption", extra={'payment_method_id': payment_method_id})
+            return Response(
+                {"error": "Invalid payment method"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # create redemption request
+        redemption = RedemptionRequest.objects.create(
+            user=request.user,
+            points=points_to_redeem,
+            payment_method=payment_method,
+            status="pending",
+            photo=photo,
+        )
+        logger.info("Redemption request created", extra={'user_id': getattr(request.user, 'id', None), 'redemption_id': redemption.id})
+
+        return Response(
+            {
+                "success": True,
+                "redemption_id": redemption.id,
+                "status": redemption.status,
+                "photo_url": redemption.photo.url if redemption.photo else None,
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception:
+        logger.exception("Unexpected error in redeem_points", extra={'user_id': getattr(request.user, 'id', None)})
+        return Response({'error': 'Redemption failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
 
 @api_view(['GET'])
 def dashboard(request):
-    total_points = RewardHistory.objects.filter(
-        user=request.user
-    ).aggregate(total=Sum('points_earned'))['total'] or 0
+    try:
+        total_points = RewardHistory.objects.filter(
+            user=request.user
+        ).aggregate(total=Sum('points_earned'))['total'] or 0
 
-    recent_activity = RewardHistory.objects.filter(
-        user=request.user
-    ).order_by('-created_at')[:5]
+        recent_activity = RewardHistory.objects.filter(
+            user=request.user
+        ).order_by('-created_at')[:5]
 
-    serializer = RewardHistorySerializer(recent_activity, many=True)
+        serializer = RewardHistorySerializer(recent_activity, many=True)
 
-    return Response({
-        'total_points': total_points,
-        'recent_activity': serializer.data
-    })
+        return Response({
+            'total_points': total_points,
+            'recent_activity': serializer.data
+        })
+    except Exception:
+        logger.exception("Error in dashboard", extra={'user_id': getattr(request.user, 'id', None)})
+        return Response({'error': 'Failed to load dashboard'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @swagger_auto_schema(
@@ -318,6 +396,12 @@ def dashboard(request):
 )
 @api_view(['POST'])
 def delete_account(request):
-    password = request.data.get('password')
-    request.user.delete()
-    return Response({'message': 'Account deleted successfully'})
+    try:
+        password = request.data.get('password')
+        uid = getattr(request.user, 'id', None)
+        request.user.delete()
+        logger.info("Account deleted", extra={'user_id': uid})
+        return Response({'message': 'Account deleted successfully'})
+    except Exception:
+        logger.exception("Error deleting account", extra={'user_id': getattr(request.user, 'id', None)})
+        return Response({'error': 'Failed to delete account'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -4,6 +4,13 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 import qrcode
 from django.core.files.base import ContentFile
+from django.db import models
+from django.conf import settings
+import uuid
+from utils.crypto import encrypt_text, decrypt_text
+import hashlib
+
+
 
 # Custom User Manager for phone-based login
 class UserManager(BaseUserManager):
@@ -76,7 +83,7 @@ class Product(models.Model):
     category = models.ForeignKey(ProductCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name="products")
     name = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to="products/", blank=True, null=True)
+    image = models.ImageField(upload_to="media/products/", blank=True, null=True)
     points = models.PositiveIntegerField(default=0)  # reward points for this product
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -84,10 +91,6 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
-
-from django.db import models
-from django.conf import settings
-import uuid
 
 
 # QR Code Model
@@ -98,7 +101,8 @@ class ProductQRCode(models.Model):
     )
 
     product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="qrcodes")
-    code = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)  # unique QR identifier
+    code = models.TextField(unique=True)  # stores ENCRYPTED value
+    code_hash = models.CharField(max_length=64, unique=True, editable=False, default="")  # SHA256 for lookup
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="unused")
     redeemed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -110,32 +114,40 @@ class ProductQRCode(models.Model):
     redeemed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        if not self.code:  # first save
+            raw_uuid = str(uuid.uuid4())
+            self.code = encrypt_text(raw_uuid)
+            self.code_hash = hashlib.sha256(raw_uuid.encode()).hexdigest()
+        super().save(*args, **kwargs)
+
+    @property
+    def decrypted_code(self) -> str:
+        """Return decrypted code on demand."""
+        return decrypt_text(self.code)
+
     def generate_qr_code(self):
-        # Create QR code instance
+        """Generate a QR code embedding the decrypted value in the URL."""
+        redemption_url = f"http://192.168.1.9:8000/redeem/{self.decrypted_code}/"
+
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
             box_size=10,
             border=4,
         )
-        
-        # Add data - using the code as redemption data
-        redemption_url = f"https://yourdomain.com/redeem/{self.code}/"
         qr.add_data(redemption_url)
         qr.make(fit=True)
-        
-        # Create an image from the QR Code instance
+
         img = qr.make_image(fill_color="black", back_color="white")
-        
-        # Convert to base64 for HTML embedding
         buffer = BytesIO()
-        img.save(buffer, format='PNG')
+        img.save(buffer, format="PNG")
         img_str = base64.b64encode(buffer.getvalue()).decode()
-        
+
         return f"data:image/png;base64,{img_str}"
 
     def __str__(self):
-        return f"{self.product.name} - {self.code} - {self.status}"
+        return f"{self.product.name} - {self.decrypted_code} - {self.status}"
 
 # Reward History
 class RewardHistory(models.Model):

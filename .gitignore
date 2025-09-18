@@ -36,6 +36,7 @@ media/
 staticfiles/
 static/
 collected_static/
+.env
 
 # Migrations (keep only __init__.py if needed)
 */migrations/*
@@ -96,3 +97,9 @@ htmlcov/
 .pytype/
 .mypy_cache/
 .dmypy.json
+
+# ============================================
+# logs
+# ============================================
+logs/*
+logs
